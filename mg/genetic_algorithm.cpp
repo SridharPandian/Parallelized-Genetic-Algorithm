@@ -5,6 +5,14 @@
 #include <random>
 #include "utils.cpp"
 
+/*
+Performs one selection step
+@param int k - hyperparamter for selection 
+@param int pop_size - size of population
+@param double * scores - array of population scores
+@return int min_idx - index of individual with 
+    minimum score after k selections
+*/
 int perform_selection(int k, int pop_size, double * scores) {
     int rand_idx = get_rand_int(0, pop_size-1);  
     int min_idx = rand_idx; 
@@ -17,16 +25,30 @@ int perform_selection(int k, int pop_size, double * scores) {
     return min_idx; 
 }
 
-void selection(int pop_size, int num_variables, double ** population, double * scores) {
+/*
+Performs selection for entire population
+@param int pop_size - size of population
+@param int num_variables - number of optimization paramters
+@param double ** pop_curr - array of individuals for population 
+                            in current generation
+@param double ** pop_curr - array of individuals for population
+                            in next generation
+@param double * scores - array of population scores
+*/
+void selection(int pop_size, int num_variables, double ** pop_curr, 
+    double ** pop_next, double * scores) {
     int k = 3; 
     for (int i = 0; i < pop_size; i++) {
         int next_idx = perform_selection(k, pop_size, scores); 
         // printf("Next idx: %d\n", next_idx); 
         for (int j = 0; j < num_variables; j++)
-            population[i][j] = population[next_idx][j]; 
+            pop_next[i][j] = pop_curr[next_idx][j]; 
     }
 }
 
+/*
+Performs one crossover step two create two children from two parents
+*/
 void perform_crossover(int num_variables, double * p1, double * p2, double r_cross) {
     if (get_rand_double(0., 1.) < r_cross) {
         std::default_random_engine generator(get_rand_int(0, RAND_MAX));
@@ -42,9 +64,9 @@ void perform_crossover(int num_variables, double * p1, double * p2, double r_cro
     }
 }
 
-void crossover(int pop_size, int num_variables, double ** population, double r_cross) {
+void crossover(int pop_size, int num_variables, double ** pop_curr, double r_cross) {
     for (int i = 0; i < pop_size; i += 2) {
-        perform_crossover(num_variables, population[i], population[i+1], r_cross); 
+        perform_crossover(num_variables, pop_curr[i], pop_curr[i+1], r_cross); 
     }
 }
 
@@ -61,10 +83,10 @@ void mutate(int num_variables, double * p, double ** bounds, double r_mut) {
     }
 }
 
-void evaluate_population(double objective (double *), int pop_size, 
-    double ** population, double * scores) {
+void evaluate_scores(double objective (double *), int pop_size, 
+    double ** pop_curr, double * scores) {
     for (int i = 0; i < pop_size; i++) {
-        scores[i] = objective(population[i]); 
+        scores[i] = objective(pop_curr[i]); 
     }
 }
 
@@ -75,17 +97,19 @@ void genetic_algorithm(double objective (double *),  double ** bounds, int num_v
     int pop_size, int num_gens, double r_cross, double r_mut) {
     
     if (pop_size % 2 == 1) pop_size += 1; 
-    double ** population = (double**) malloc(pop_size*sizeof(double*));
+    double ** pop_curr = (double**) malloc(pop_size*sizeof(double*));
+    double ** pop_next = (double**) malloc(pop_size*sizeof(double*)); 
     double * scores = (double*) malloc(pop_size*sizeof(double)); 
     // printf("Before first selection: \n"); 
 
     srand(time(NULL));
     for (int i = 0; i < pop_size; i++) {
-        population[i] = (double*) malloc(num_variables*sizeof(double));
+        pop_curr[i] = (double*) malloc(num_variables*sizeof(double));
+        pop_next[i] = (double*) malloc(num_variables*sizeof(double)); 
         for (int j = 0; j < num_variables; j++) {
-            population[i][j] = bounds[0][j] + get_rand_double(0, 1)*(bounds[1][j] - bounds[0][j]);
+            pop_curr[i][j] = bounds[0][j] + get_rand_double(0, 1)*(bounds[1][j] - bounds[0][j]);
             //printf("Lower bound: %f, Upper Bound: %f\n", bounds[0][j], bounds[1][j]);  
-            // printf("Pop[i][%d]: %f, ", j, population[i][j]); 
+            // printf("Pop[i][%d]: %f, ", j, pop_curr[i][j]); 
         }
         // printf("\n"); 
 
@@ -95,18 +119,25 @@ void genetic_algorithm(double objective (double *),  double ** bounds, int num_v
     // printf("After first selection: \n"); 
 
     for (int i = 0; i < num_gens; i++) {
-        evaluate_population(objective, pop_size, population, scores); 
-        selection(pop_size, num_variables, population, scores);
-        crossover(pop_size, num_variables, population, r_cross); 
+        // evaluate fitness for population
+        evaluate_scores(objective, pop_size, pop_curr, scores); 
+        // select individuals for next generation
+        selection(pop_size, num_variables, pop_curr, pop_next, scores);
+        
+        // copy next generation into current generation
+        std::swap(pop_curr, pop_next); 
+
+        // perform crossover and mutation
+        crossover(pop_size, num_variables, pop_curr, r_cross); 
         for (int i = 0; i < pop_size; i++)
-            mutate(num_variables, population[i], bounds, r_mut);
+            mutate(num_variables, pop_curr[i], bounds, r_mut);
         
         double min_score = scores[0];
-        double * min_individual = population[0]; 
+        double * min_individual = pop_curr[0]; 
         for (int i = 1; i < pop_size; i++) {
             if (scores[i] < min_score) {
                 min_score = scores[i];
-                min_individual = population[i];
+                min_individual = pop_curr[i];
             }
         }    
         printf("Best score: %f\n", min_score); 
