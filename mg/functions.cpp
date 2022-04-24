@@ -24,6 +24,7 @@ double goldstein_price_function(double * w) {
     return (t1*t2);
 }
 
+// easom objective function 
 double easom_function(double * w) {
     double x = w[0], y = w[1]; 
     double t1 = -1 * cos(x) * cos(y); 
