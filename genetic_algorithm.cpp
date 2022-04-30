@@ -38,7 +38,7 @@ Performs selection for entire population - calls perform_selection()
                             in next generation
 @param double * scores - array of population scores
 */
-void selection(int pop_size, int num_variables, double ** pop_curr, double ** pop_next, double * scores, int alloc_threads) {
+void selection(int pop_size, int num_variables, double ** pop_curr, double ** pop_next, double * scores) {
     int k = 3; 
 
     for (int i = 0; i < pop_size; i++) {
@@ -81,7 +81,7 @@ Performs crossover for entire population - calls perform_crossover()
 @param double r_cross - hyperparameter for crossover rate
 */
 void crossover(int pop_size, int num_variables, double ** pop_curr, double r_cross, int alloc_threads) {
-    #pragma omp parallel for num_threads(alloc_threads)
+    #pragma omp parallel for schedule(static, pop_size / (alloc_threads / 2) + 1)
     for (int i = 0; i < pop_size; i += 2) {
         perform_crossover(num_variables, pop_curr[i], pop_curr[i+1], r_cross); 
     }
@@ -117,7 +117,7 @@ Performs mutation for entire population - calls perform_mutation()
 @param double r_mut - hyperparameter for mutation rate
 */
 void mutate(int pop_size, int num_variables, double ** pop_curr, double ** bounds, double r_mut, int alloc_threads) {
-    #pragma omp parallel for num_threads(alloc_threads)
+    #pragma omp parallel for schedule(static, pop_size / alloc_threads + 1)
     for (int i = 0; i < pop_size; i++)
         perform_mutation(num_variables, pop_curr[i], bounds, r_mut);
 }
@@ -138,7 +138,7 @@ double * evaluate_scores(double objective (double *), int pop_size, double ** po
     double * min_individual = pop_curr[0]; 
     
     // loop over population
-    #pragma omp parallel for num_threads(alloc_threads)
+    #pragma omp parallel for schedule(static, pop_size / alloc_threads + 1)
     for (int i = 0; i < pop_size; i++)
         scores[i] = objective(pop_curr[i]); 
 
@@ -169,6 +169,8 @@ population size, number of generations and other hyperparamters
 */
 double * genetic_algorithm(double objective (double *),  double ** bounds, int num_variables, 
     int pop_size, int num_gens, double r_cross, double r_mut, int alloc_threads) {
+    // Setting the number of threads
+    // omp_set_num_threads(alloc_threads);
     printf("Number of threads being used for this genetic algorithm: %d\n\n", alloc_threads);
     
     // Initializing timer
@@ -207,7 +209,7 @@ double * genetic_algorithm(double objective (double *),  double ** bounds, int n
         // select individuals for next generation
         t.tic();
         printf("Performing selection for generation: %d\n", i);
-        selection(pop_size, num_variables, pop_curr, pop_next, scores, alloc_threads);
+        selection(pop_size, num_variables, pop_curr, pop_next, scores);
         printf("Time taken: %10f\n", t.toc());
         
         // swap next generation with current generation
