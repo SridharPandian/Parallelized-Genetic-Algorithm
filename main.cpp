@@ -1,52 +1,30 @@
-#include<iostream>
-
-#include "Individual.h"
-#include "Population.h"
-#include "GeneticAlgorithm.h"
-
-using namespace std;
+#include "functions.cpp"
+#include "genetic_algorithm.cpp"
 
 int main() {
-    GeneticAlgorithm* geneticAlgorithm = new GeneticAlgorithm();
+    // declare and initialize hyperparameters for GA
+    int pop_size, num_variables, num_gens; 
+    double r_cross, r_mut; 
+    num_variables = 5; 
+    pop_size = 10000; 
+    num_gens = 1000;
+    r_cross = 0.8;
+    r_mut = 0.15; 
 
-    geneticAlgorithm->population->calcFitness();
+    // get bounds for optimization parameters
+    double ** bounds = get_bounds(num_variables, -(10^6), 10^6); 
 
-    cout << "Generation: " << geneticAlgorithm->generation << " Fittest: " << geneticAlgorithm->population->fittest;
+    // call GA with given hyperparameters
+    double * opt_res = genetic_algorithm(rosenbrock_function_dim5, 
+        bounds, num_variables, pop_size, num_gens, r_cross, r_mut);
 
-    //While population gets an individual with maximum fitness
-    while (geneticAlgorithm->population->fittest < 5) {
-        ++geneticAlgorithm->generation;
-
-        //Do selection
-        geneticAlgorithm->selection();
-
-        //Do crossover
-        geneticAlgorithm->crossOver();
-
-        //Do mutation under a random probability
-        if (rand() % 7 < 5) {
-            geneticAlgorithm->mutation();
-        }
-
-        //Add fittest offspring to population
-        geneticAlgorithm->addFittestOffspring();
-
-        //Calculate new fitness value
-        geneticAlgorithm->population->calcFitness();
-
-        cout << "Generation: " << geneticAlgorithm->generation << " Fittest: " << geneticAlgorithm->population->fittest;
+    // print optimized parameters
+    for (int j = 0; j < num_variables; j++) {
+        printf("Opt_Res[%d]: %f, ", j, opt_res[j]); 
     }
+    printf("\n"); 
 
-    cout << "\nSolution found in generation " << geneticAlgorithm->generation;
-
-    // Printing the information about the fittest individual
-    int fittestIndividualIdx = geneticAlgorithm->population->fittestIdx;
-    Individual fittestIndividual = geneticAlgorithm->population->individuals[fittestIndividualIdx];
-    cout << "Fitness: " << fittestIndividual.fitness;
-
-    // Printing out the genes of the fittest individual
-    cout << "Genes: ";
-    for (int i = 0; i < 5; i++) {
-        cout << fittestIndividual.genes[i];
-    }
+    // print minimum score
+    printf("Minimum score: %f\n", rosenbrock_function_dim5(opt_res)); 
+    return 0; 
 }
