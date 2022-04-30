@@ -3,7 +3,10 @@
 #include <math.h>
 #include <time.h>
 #include <random>
+#include <limits>
 #include "utils.cpp"
+#include "misc.h"
+#include "omp.h"
 
 /*
 Performs one selection step
@@ -35,12 +38,11 @@ Performs selection for entire population - calls perform_selection()
                             in next generation
 @param double * scores - array of population scores
 */
-void selection(int pop_size, int num_variables, double ** pop_curr, 
-    double ** pop_next, double * scores) {
+void selection(int pop_size, int num_variables, double ** pop_curr, double ** pop_next, double * scores, int alloc_threads) {
     int k = 3; 
+
     for (int i = 0; i < pop_size; i++) {
         int next_idx = perform_selection(k, pop_size, scores); 
-        // printf("Next idx: %d\n", next_idx); 
         for (int j = 0; j < num_variables; j++)
             pop_next[i][j] = pop_curr[next_idx][j]; 
     }
@@ -60,7 +62,7 @@ void perform_crossover(int num_variables, double * p1, double * p2, double r_cro
         std::normal_distribution<double> distribution(0.5,0.15);
 
         double gamma = distribution(generator); 
-        // fprintf(stderr, "Gamma : %f\n", gamma); 
+
         for (int j = 0; j < num_variables; j++) {
             double temp = p1[j];
             p1[j] = (1 - gamma) * p1[j] + gamma * p2[j]; 
@@ -78,7 +80,8 @@ Performs crossover for entire population - calls perform_crossover()
 @param int num_variables - number of optimization paramters
 @param double r_cross - hyperparameter for crossover rate
 */
-void crossover(int pop_size, int num_variables, double ** pop_curr, double r_cross) {
+void crossover(int pop_size, int num_variables, double ** pop_curr, double r_cross, int alloc_threads) {
+    #pragma omp parallel for num_threads(alloc_threads)
     for (int i = 0; i < pop_size; i += 2) {
         perform_crossover(num_variables, pop_curr[i], pop_curr[i+1], r_cross); 
     }
@@ -91,7 +94,7 @@ Performs mutation on a single individual in-place
 @param double * bounds - bounds for optimization paramters
 @param double r_mut - hyperparameter for mutation rate
 */
-void mutate(int num_variables, double * p, double ** bounds, double r_mut) {
+void perform_mutation(int num_variables, double * p, double ** bounds, double r_mut) {
     if (get_rand_double(0., 1.) < r_mut) { 
         for (int j = 0; j < num_variables; j++) {
             double range = (bounds[1][j] - bounds[0][j]) / 100.0; 
@@ -105,6 +108,21 @@ void mutate(int num_variables, double * p, double ** bounds, double r_mut) {
 }
 
 /*
+Performs mutation for entire population - calls perform_mutation()
+@param int pop_size - size of population
+@param double ** pop_curr - array of individuals for population 
+                            in current generation
+@param int num_variables - number of optimization paramters
+@param bounds - bounds for optimization paramters
+@param double r_mut - hyperparameter for mutation rate
+*/
+void mutate(int pop_size, int num_variables, double ** pop_curr, double ** bounds, double r_mut, int alloc_threads) {
+    #pragma omp parallel for num_threads(alloc_threads)
+    for (int i = 0; i < pop_size; i++)
+        perform_mutation(num_variables, pop_curr[i], bounds, r_mut);
+}
+
+/*
 Evaluates scores of current population and return individual with 
 minimum score
 @param double objective (double *) - objective function to be minimized 
@@ -114,16 +132,18 @@ minimum score
 @param double * scores - array of population scores
 @return double * min_individual - individual with minimum score 
 */
-double * evaluate_scores(double objective (double *), int pop_size, 
-    double ** pop_curr, double * scores) {
+double * evaluate_scores(double objective (double *), int pop_size, double ** pop_curr, double * scores, int alloc_threads) {
     // initialize score and individual
-    double min_score = scores[0];
+    double min_score = std::numeric_limits<float>::infinity();
     double * min_individual = pop_curr[0]; 
     
     // loop over population
-    for (int i = 0; i < pop_size; i++) {
+    #pragma omp parallel for num_threads(alloc_threads)
+    for (int i = 0; i < pop_size; i++)
         scores[i] = objective(pop_curr[i]); 
-        // update minimum individual
+
+    // update minimum individual
+    for (int i = 0; i < pop_size; i++) {   
         if (scores[i] < min_score) {
             min_score = scores[i];
             min_individual = pop_curr[i];
@@ -144,11 +164,16 @@ population size, number of generations and other hyperparamters
 @param int num_gens - number of generations to run for
 @param double r_cross - hyperparameter for crossover rate
 @param double r_mut - hyperparameter for mutation rate 
+@param int num_threads - number of threads to be used for parallelization
 @return double * min_individual - final individual with minimum score 
 */
 double * genetic_algorithm(double objective (double *),  double ** bounds, int num_variables, 
-    int pop_size, int num_gens, double r_cross, double r_mut) {
+    int pop_size, int num_gens, double r_cross, double r_mut, int alloc_threads) {
+    printf("Number of threads being used for this genetic algorithm: %d\n\n", alloc_threads);
     
+    // Initializing timer
+    Timer t;
+
     // always use even population size
     if (pop_size % 2 == 1) pop_size += 1; 
     
@@ -164,31 +189,46 @@ double * genetic_algorithm(double objective (double *),  double ** bounds, int n
     for (int i = 0; i < pop_size; i++) {
         pop_curr[i] = (double*) malloc(num_variables*sizeof(double));
         pop_next[i] = (double*) malloc(num_variables*sizeof(double)); 
-        for (int j = 0; j < num_variables; j++) {
-            pop_curr[i][j] = bounds[0][j] + get_rand_double(0, 1)*(bounds[1][j] - bounds[0][j]);
-            // printf("Lower bound: %f, Upper Bound: %f\n", bounds[0][j], bounds[1][j]);  
-            // printf("Pop[i][%d]: %f, ", j, pop_curr[i][j]); 
-        }
-        // printf("\n"); 
+
+        for (int j = 0; j < num_variables; j++)
+            pop_curr[i][j] = bounds[0][j] + get_rand_double(0, 1)*(bounds[1][j] - bounds[0][j]); 
     }
+
     // evaluate initial scores and get fittest individual
-    double * min_individual = evaluate_scores(objective, pop_size, pop_curr, scores); 
+    t.tic();
+    printf("Computing the scores for all the individuals in the population before starting the algorithm!\n");
+    double * min_individual = evaluate_scores(objective, pop_size, pop_curr, scores, alloc_threads); 
+    printf("Time taken: %10f\n\n", t.toc());
 
     // Main GA for loop
     for (int i = 0; i < num_gens; i++) {
+        printf("Working on generation: %d\n", i);
+
         // select individuals for next generation
-        selection(pop_size, num_variables, pop_curr, pop_next, scores);
+        t.tic();
+        printf("Performing selection for generation: %d\n", i);
+        selection(pop_size, num_variables, pop_curr, pop_next, scores, alloc_threads);
+        printf("Time taken: %10f\n", t.toc());
         
         // swap next generation with current generation
         std::swap(pop_curr, pop_next); 
 
         // perform crossover and mutation
-        crossover(pop_size, num_variables, pop_curr, r_cross); 
-        for (int i = 0; i < pop_size; i++)
-            mutate(num_variables, pop_curr[i], bounds, r_mut);
+        t.tic();
+        printf("Performing crossover for generation: %d\n", i);
+        crossover(pop_size, num_variables, pop_curr, r_cross, alloc_threads); 
+        printf("Time taken: %10f\n", t.toc());
+
+        t.tic();
+        printf("Performing mutation for generation: %d\n", i);
+        mutate(pop_size, num_variables, pop_curr, bounds, r_mut, alloc_threads);
+        printf("Time taken: %10f\n", t.toc());
         
         // evaluate fitness for population and get fittest individual
-        min_individual = evaluate_scores(objective, pop_size, pop_curr, scores); 
+        t.tic();
+        printf("Evaluating the scores of each individual after generation: %d!\n", i);
+        min_individual = evaluate_scores(objective, pop_size, pop_curr, scores, alloc_threads); 
+        printf("Time taken: %10f\n\n", t.toc());
     }
 
     // return final fittest individual
