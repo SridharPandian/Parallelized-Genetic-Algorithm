@@ -2,7 +2,7 @@
 #include "genetic_algorithm.cpp"
 
 int main() {
-    // declare and initialize hyperparameters for GA
+    // Declare and initialize hyperparameters for GA
     int num_variables, num_gens, thread_num, runs; 
     double r_cross, r_mut; 
     num_variables = 1000; 
@@ -13,7 +13,7 @@ int main() {
     thread_num = 32;
     runs = 1;
 
-    // get bounds for optimization parameters
+    // Get bounds for optimization parameters
     double ** bounds = get_bounds(num_variables, -(10^6), 10^6); 
 
     // Initializing and starting the timer
@@ -27,15 +27,15 @@ int main() {
 
     printf("Time taken by the algorithm: %10f\n", t.toc());
 
-    // print optimized parameters
-    // for (int j = 0; j < num_variables; j++) {
-    //     printf("\nOpt_Res[%d]: %f, ", j, opt_res[j]); 
-    // }
-    // printf("\n"); 
+    // Print optimized parameters
+    for (int j = 0; j < num_variables; j++) {
+        printf("\nOpt_Res[%d]: %f, ", j, opt_res[j]); 
+    }
+    printf("\n"); 
 
     // print minimum score
     printf("Minimum score of run: %f\n", rosenbrock_function_dim5(residuals)); 
     return 0; 
 
-    // free(residuals);
+    free(residuals);
 }
