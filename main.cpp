@@ -19,7 +19,8 @@ int main() {
 
     // call GA with given hyperparameters
     multi_island_ga_migration(rosenbrock_function_dim5, bounds, 
-        num_variables, num_islands, migration_interval, pop_size, num_gens, r_cross, r_mut, r_mig);
+        num_variables, num_islands, pop_size, num_gens, migration_interval, 
+        r_cross, r_mut, r_mig);
 
     return 0; 
 }

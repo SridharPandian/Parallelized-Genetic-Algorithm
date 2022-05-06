@@ -135,20 +135,22 @@ double * evaluate_scores(double objective (double *), int pop_size,
 }
 
 /*
-Island version of Genetic algorithm for a given objective function, 
+Genetic algorithm for a given objective function, 
 population size, number of generations and other hyperparamters
 @param double objective (double *) - objective function to be minimized 
+@param double ** pop_curr - initial population 
 @param double * bounds - bounds for optimization paramters
 @param int num_variables - number of optimization paramters
 @param int pop_size - size of population
 @param int num_gens - number of generations to run for
 @param double r_cross - hyperparameter for crossover rate
 @param double r_mut - hyperparameter for mutation rate 
-@return double * min_individual - final individual with minimum score 
+@param int seed (optional) - seed for random number generation 
+@return double ** pop_curr - final optimized population 
 */
 double ** genetic_algorithm_multi(double objective (double *),  double ** pop_curr, 
-    double ** bounds, int num_variables, int pop_size, int num_gens, double r_cross, double r_mut, 
-    int seed = time(NULL)) {
+    double ** bounds, int num_variables, int pop_size, int num_gens, double r_cross, 
+    double r_mut, int seed = time(NULL)) {
         
     // allocate arrays for populations and scores
     double ** pop_next = (double**) malloc(pop_size*sizeof(double*)); 
@@ -181,6 +183,6 @@ double ** genetic_algorithm_multi(double objective (double *),  double ** pop_cu
         min_individual = evaluate_scores(objective, pop_size, pop_curr, scores); 
     }
         
-    // return final fittest individual
+    // return final population
     return pop_curr; 
 }
