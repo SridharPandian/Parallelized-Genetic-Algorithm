@@ -18,7 +18,7 @@ int main() {
     double ** bounds = get_bounds(num_variables, -(10^6), 10^6); 
 
     // call GA with given hyperparameters
-    multi_island_ga_migration(rosenbrock_function_dim5, bounds, 
+    multi_island_ga(rosenbrock_function_dim5, bounds, 
         num_variables, num_islands, pop_size, num_gens, migration_interval, 
         r_cross, r_mut, r_mig);
 
