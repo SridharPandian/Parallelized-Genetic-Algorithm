@@ -135,7 +135,7 @@ double * evaluate_scores(double objective (double *), int pop_size,
 }
 
 /*
-Main function to run Genetic algorithm for a given objective function, 
+Island version of Genetic algorithm for a given objective function, 
 population size, number of generations and other hyperparamters
 @param double objective (double *) - objective function to be minimized 
 @param double * bounds - bounds for optimization paramters
@@ -146,34 +146,24 @@ population size, number of generations and other hyperparamters
 @param double r_mut - hyperparameter for mutation rate 
 @return double * min_individual - final individual with minimum score 
 */
-double * genetic_algorithm(double objective (double *),  double ** bounds, int num_variables, 
-    int pop_size, int num_gens, double r_cross, double r_mut) {
-    
-    // always use even population size
-    if (pop_size % 2 == 1) pop_size += 1; 
-    
+double ** genetic_algorithm_multi(double objective (double *),  double ** pop_curr, 
+    double ** bounds, int num_variables, int pop_size, int num_gens, double r_cross, double r_mut, 
+    int seed = time(NULL)) {
+        
     // allocate arrays for populations and scores
-    double ** pop_curr = (double**) malloc(pop_size*sizeof(double*));
     double ** pop_next = (double**) malloc(pop_size*sizeof(double*)); 
     double * scores = (double*) malloc(pop_size*sizeof(double)); 
 
-    // initialize random seed
-    srand(time(NULL));
+    // initialize random with provided  seed
+    srand(seed);
 
-    // initialize population with random values between bounds
+    // initialize next population with random values between bounds
     for (int i = 0; i < pop_size; i++) {
-        pop_curr[i] = (double*) malloc(num_variables*sizeof(double));
-        pop_next[i] = (double*) malloc(num_variables*sizeof(double)); 
-        for (int j = 0; j < num_variables; j++) {
-            pop_curr[i][j] = bounds[0][j] + get_rand_double(0, 1)*(bounds[1][j] - bounds[0][j]);
-            // printf("Lower bound: %f, Upper Bound: %f\n", bounds[0][j], bounds[1][j]);  
-            // printf("Pop[i][%d]: %f, ", j, pop_curr[i][j]); 
-        }
-        // printf("\n"); 
+        pop_next[i] = (double*) malloc(num_variables*sizeof(double));  
     }
+
     // evaluate initial scores and get fittest individual
     double * min_individual = evaluate_scores(objective, pop_size, pop_curr, scores); 
-
     // Main GA for loop
     for (int i = 0; i < num_gens; i++) {
         // select individuals for next generation
@@ -181,16 +171,16 @@ double * genetic_algorithm(double objective (double *),  double ** bounds, int n
         
         // swap next generation with current generation
         std::swap(pop_curr, pop_next); 
-
-        // perform crossover and mutation
+        
+        // perform crossover and mutation        
         crossover(pop_size, num_variables, pop_curr, r_cross); 
         for (int i = 0; i < pop_size; i++)
             mutate(num_variables, pop_curr[i], bounds, r_mut);
-        
+                
         // evaluate fitness for population and get fittest individual
         min_individual = evaluate_scores(objective, pop_size, pop_curr, scores); 
     }
-
+        
     // return final fittest individual
-    return min_individual; 
+    return pop_curr; 
 }

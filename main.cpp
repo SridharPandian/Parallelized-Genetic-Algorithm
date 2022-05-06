@@ -1,52 +1,25 @@
-#include<iostream>
-
-#include "Individual.h"
-#include "Population.h"
-#include "GeneticAlgorithm.h"
-
-using namespace std;
+#include "functions.cpp"
+#include "multi_island_ga.cpp"
 
 int main() {
-    GeneticAlgorithm* geneticAlgorithm = new GeneticAlgorithm();
+    // declare and initialize hyperparameters for GA
+    int num_islands, migration_interval, pop_size, num_variables, num_gens; 
+    double r_cross, r_mut, r_mig; 
+    num_islands = 8; 
+    num_variables = 5; 
+    pop_size = 1000; 
+    num_gens = 100;
+    migration_interval = 10; 
+    r_cross = 0.8;
+    r_mut = 0.15; 
+    r_mig = 0.01;
 
-    geneticAlgorithm->population->calcFitness();
+    // get bounds for optimization parameters
+    double ** bounds = get_bounds(num_variables, -(10^6), 10^6); 
 
-    cout << "Generation: " << geneticAlgorithm->generation << " Fittest: " << geneticAlgorithm->population->fittest;
+    // call GA with given hyperparameters
+    multi_island_ga_migration(rosenbrock_function_dim5, bounds, 
+        num_variables, num_islands, migration_interval, pop_size, num_gens, r_cross, r_mut, r_mig);
 
-    //While population gets an individual with maximum fitness
-    while (geneticAlgorithm->population->fittest < 5) {
-        ++geneticAlgorithm->generation;
-
-        //Do selection
-        geneticAlgorithm->selection();
-
-        //Do crossover
-        geneticAlgorithm->crossOver();
-
-        //Do mutation under a random probability
-        if (rand() % 7 < 5) {
-            geneticAlgorithm->mutation();
-        }
-
-        //Add fittest offspring to population
-        geneticAlgorithm->addFittestOffspring();
-
-        //Calculate new fitness value
-        geneticAlgorithm->population->calcFitness();
-
-        cout << "Generation: " << geneticAlgorithm->generation << " Fittest: " << geneticAlgorithm->population->fittest;
-    }
-
-    cout << "\nSolution found in generation " << geneticAlgorithm->generation;
-
-    // Printing the information about the fittest individual
-    int fittestIndividualIdx = geneticAlgorithm->population->fittestIdx;
-    Individual fittestIndividual = geneticAlgorithm->population->individuals[fittestIndividualIdx];
-    cout << "Fitness: " << fittestIndividual.fitness;
-
-    // Printing out the genes of the fittest individual
-    cout << "Genes: ";
-    for (int i = 0; i < 5; i++) {
-        cout << fittestIndividual.genes[i];
-    }
+    return 0; 
 }
