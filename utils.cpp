@@ -70,7 +70,7 @@ void swap_fittest_worst (int num_inds, double ** pop_curr, double ** pop_next,
 }
 
 // Function to initializes population of each island for multi-island GA
-void initialize_population(double *** pop, double ** bounds, int num_islands, 
+void init_population(double *** pop, double ** bounds, int num_islands, 
     int pop_size, int num_variables) {
     // loop over islands
     for (int k = 0; k < num_islands; k++) {

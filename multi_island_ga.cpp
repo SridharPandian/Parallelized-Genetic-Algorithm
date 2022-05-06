@@ -16,7 +16,7 @@ population size, number of generations and other hyperparamters
 @param double r_mut - hyperparameter for mutation rate 
 @param double r_mig - hyperparameter for migration rate 
 */
-void multi_island_ga_migration(double objective (double *),  double ** bounds, int num_variables,
+void multi_island_ga(double objective (double *),  double ** bounds, int num_variables,
     int num_islands, int pop_size, int num_gens, int migration_interval, double r_cross, double r_mut,
     double r_mig) {  
     // initialize random seed using time
@@ -37,7 +37,7 @@ void multi_island_ga_migration(double objective (double *),  double ** bounds, i
     int ** worst = (int**) malloc(num_inds*sizeof(int*)); 
 
     // initialize population of all islands
-    initialize_population(pop, bounds, num_islands, pop_size, num_variables); 
+    init_population(pop, bounds, num_islands, pop_size, num_variables); 
     // printf("initialized %d\n", num_migrations); 
 
     for (int m = 0; m < num_migrations; m++) {
