@@ -223,13 +223,6 @@ population size, number of generations and other hyperparamters
 double ** genetic_algorithm_multi(double objective (double *), double ** pop_curr, long int ** sel_rand_block, 
     double * gamma_block, long int ** cross_prob, long int ** mut_rand_block, long int ** mut_prob,
     double ** bounds, int num_variables, int pop_size, int num_gens, double r_cross, double r_mut, int thread_num) { 
-    // OMP parameters
-    // #if defined(_OPENMP)
-    // omp_set_num_threads(thread_num)
-    // #endif
-
-    Timer t;
-
     // Allocate arrays for populations and scores
     double ** pop_next = (double**) malloc(pop_size*sizeof(double*)); 
     double * scores = (double*) malloc(pop_size*sizeof(double));     
@@ -245,33 +238,22 @@ double ** genetic_algorithm_multi(double objective (double *), double ** pop_cur
     // Main GA for loop
     for (int i = 0; i < num_gens; i++) {
         // Changing the random values in all the random blocks
-        // t.tic();
         rerandomize(pop_size, num_variables, sel_rand_block, gamma_block, cross_prob, mut_rand_block, mut_prob, thread_num);
-        // printf("Time taken for randomization: %10f\n", t.toc());
-
         
         // Select individuals for next generation
-        // t.tic();
         selection(pop_size, num_variables, pop_curr, pop_next, scores, sel_rand_block);
-        // printf("Time taken for selection: %10f\n", t.toc());
         
         // Swap next generation with current generation
         std::swap(pop_curr, pop_next); 
 
         // Perform crossover 
-        // t.tic();
         crossover(pop_size, num_variables, pop_curr, r_cross, thread_num, gamma_block, cross_prob); 
-        // printf("Time taken for crossover: %10f\n", t.toc());
 
         // Perform mutation
-        // t.tic();
         mutate(pop_size, num_variables, pop_curr, bounds, r_mut, mut_rand_block, thread_num, mut_prob);
-        // printf("Time taken for mutation: %10f\n", t.toc());
         
         // Evaluate fitness for population and get fittest individual
-        t.tic();
         min_individual = evaluate_scores(objective, pop_size, pop_curr, scores, thread_num); 
-        printf("Time taken for evaluation: %10f\n", t.toc());
     }
 
     // Freeing all the allocated memory

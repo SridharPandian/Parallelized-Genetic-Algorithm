@@ -60,7 +60,6 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
     omp_set_nested(true);
     printf("Using %d threads!\n", omp_get_max_threads());
     thread_num = omp_get_max_threads() / num_islands;
-    thread_num = 1;
     printf("Number of threads per island: %d\n", thread_num);
     #endif   
 
