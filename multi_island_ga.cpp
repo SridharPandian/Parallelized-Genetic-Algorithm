@@ -28,8 +28,41 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
     // declare arrays to collect optimized final populations
     double *** pop = (double***) malloc(num_islands*sizeof(double**)); 
     
+    // Initializing random blocks
+    long int *** sel_rand_block = (long int***) malloc(num_islands*sizeof(long int**)); 
+    double ** gamma_block = (double **) malloc(num_islands*sizeof(double*));
+    long int*** cross_prob = (long int***) malloc(num_islands*sizeof(long int**));
+    long int *** mut_rand_block = (long int***) malloc(num_islands*sizeof(long int**)); 
+    long int *** mut_prob = (long int***) malloc(num_islands*sizeof(long int**)); 
+
+    // Assigning all the random values
+    for (int i = 0; i < num_islands; i++) {
+        // Random values for selection
+        sel_rand_block[i] = get_rand_block(pop_size, 3);
+
+        // Random values for crossover
+        gamma_block[i] = get_gamma_block(pop_size / 2);
+        cross_prob[i] = get_rand_block(pop_size / 2, 1);
+
+        // Random values for mutation
+        mut_rand_block[i] = get_rand_block(pop_size, num_variables);
+        mut_prob[i] = get_rand_block(pop_size, 1);
+    }
+    
     // compute total number of migrations
     int num_migrations = num_gens / migration_interval;
+
+    // Initializing the number of threads - incase of serialization
+    int thread_num = 1;
+
+    // Initializing the number of threads for the parallel case
+    #if defined(_OPENMP)
+    omp_set_nested(true);
+    printf("Using %d threads!\n", omp_get_max_threads());
+    thread_num = omp_get_max_threads() / num_islands;
+    thread_num = 1;
+    printf("Number of threads per island: %d\n", thread_num);
+    #endif   
 
     // set rate of migration and declare arrays to hold fittest and worst
     int num_inds = r_mig * pop_size;  
@@ -38,21 +71,20 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
 
     // initialize population of all islands
     init_population(pop, bounds, num_islands, pop_size, num_variables); 
-    // printf("initialized %d\n", num_migrations); 
 
+    // Running the genetic island algorithm
     for (int m = 0; m < num_migrations; m++) {
         // call genetic algorithm on all islands with omp parallel
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(num_islands)
         for (int i = 0; i < num_islands; i++) {
-            // printf("Island GA %d start \n", i); 
-            pop[i] = genetic_algorithm_multi(objective, pop[i], bounds, num_variables, pop_size, 
-                migration_interval, r_cross, r_mut, rand());
+            pop[i] = genetic_algorithm_multi(objective, pop[i], sel_rand_block[i], gamma_block[i], cross_prob[i], mut_rand_block[i], mut_prob[i], 
+                bounds, num_variables, pop_size, migration_interval, r_cross, r_mut, thread_num);
 
             // get fittest and worst individuals of current population
             fittest[i] = get_fittest_individuals(objective, num_inds, pop[i], pop_size, 1);
             worst[i] = get_fittest_individuals(objective, num_inds, pop[i], pop_size, -1);
-            // printf("Island GA %d done \n", i);
         }
+        #pragma omp barrier
         
         // swap fittest of current island with worst of next island - ring topology
         for (int i = 0; i < num_islands; i++) {
@@ -63,11 +95,22 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
         }
     }
 
-    #pragma omp parallel for
-    for (int i = 0; i < num_islands; i++) {
-        // get fittest on island and print objective
-        int * fittest_curr = get_fittest_individuals(objective, 1, pop[i], pop_size, 1); 
-        int f = fittest_curr[0]; 
-        printf("Best score, island %d: %f\n", i, objective(pop[i][f])); 
-    }    
+    // Obtaining the fittest score from each island
+    // #pragma omp parallel for
+    // for (int i = 0; i < num_islands; i++) {
+    //     // get fittest on island and print objective
+    //     int * fittest_curr = get_fittest_individuals(objective, 1, pop[i], pop_size, 1); 
+    //     int f = fittest_curr[0]; 
+    //     printf("Best score, island %d: %f\n", i, objective(pop[i][f])); 
+    // }
+
+    // Freeing all the allocated memory
+    free(pop);
+    free(sel_rand_block);
+    free(gamma_block);
+    free(cross_prob);
+    free(mut_rand_block);
+    free(mut_prob);
+    free(worst); 
+    free(fittest);   
 }
