@@ -14,5 +14,5 @@ g++ -O3 -std=c++11 main.cpp -o main_serial && ./main_serial
 ```
 Use the following command to compile and run a parallelized version of the islands algorithm:
 ```
-g++ -O3 -std=c++11 main.cpp -o main_parallel && ./main_parallel
+g++ -O3 -std=c++11 -fopenmp main.cpp -o main_parallel && ./main_parallel
 ```
