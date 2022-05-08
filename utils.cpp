@@ -106,8 +106,11 @@ void swap_fittest_worst (int num_inds, double ** pop_curr, double ** pop_next,
     int * fittest, int * worst, int num_variables) {
     for (int i = 0; i < num_inds; i++) {
         // do memcpy using fittest and worst indexes
-        memcpy(pop_next[worst[i]], pop_curr[fittest[i]], 
-            num_variables*sizeof(double));
+        int f, w = fittest[i], worst[i];
+        for (int j = 0; j < num_variables; j++) {
+            pop_next[w][j] = pop_curr[f][j]; 
+        }  
+        //memcpy(pop_next[w], pop_curr[f], num_variables*sizeof(double));
     }
 }
 

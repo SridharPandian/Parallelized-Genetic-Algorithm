@@ -65,8 +65,8 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
 
     // set rate of migration and declare arrays to hold fittest and worst
     int num_inds = r_mig * pop_size;  
-    int ** fittest = (int**) malloc(num_inds*sizeof(int*));
-    int ** worst = (int**) malloc(num_inds*sizeof(int*)); 
+    int ** fittest = (int**) malloc(num_islands*sizeof(int*));
+    int ** worst = (int**) malloc(num_islands*sizeof(int*)); 
 
     // initialize population of all islands
     init_population(pop, bounds, num_islands, pop_size, num_variables); 
@@ -84,7 +84,7 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
             worst[i] = get_fittest_individuals(objective, num_inds, pop[i], pop_size, -1);
         }
         #pragma omp barrier
-        
+
         // swap fittest of current island with worst of next island - ring topology
         for (int i = 0; i < num_islands; i++) {
             // if i = last island, then next = 0th island
@@ -95,13 +95,13 @@ void multi_island_ga(double objective (double *),  double ** bounds, int num_var
     }
 
     // Obtaining the fittest score from each island
-    // #pragma omp parallel for
-    // for (int i = 0; i < num_islands; i++) {
-    //     // get fittest on island and print objective
-    //     int * fittest_curr = get_fittest_individuals(objective, 1, pop[i], pop_size, 1); 
-    //     int f = fittest_curr[0]; 
-    //     printf("Best score, island %d: %f\n", i, objective(pop[i][f])); 
-    // }
+    #pragma omp parallel for
+    for (int i = 0; i < num_islands; i++) {
+        // get fittest on island and print objective
+        int * fittest_curr = get_fittest_individuals(objective, 1, pop[i], pop_size, 1); 
+        int f = fittest_curr[0]; 
+        printf("Best score, island %d: %f\n", i, objective(pop[i][f])); 
+    }
 
     // Freeing all the allocated memory
     free(pop);

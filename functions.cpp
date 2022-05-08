@@ -12,6 +12,19 @@ double test_objective(double * w) {
     return objective;
 }
 
+// 3 dimensional Rosenbrock function 
+// Bounds: -inf < x_i < inf
+// Min parameters: (1, 1, 1), Min score: 0
+double rosenbrock_function_dim3(double * w) {
+    int n = 3; 
+    double sum = 0; 
+    for (int i = 0; i < n-1; i++) {
+        sum += 100 * pow((w[i+1] - pow(w[i], 2)), 2); 
+        sum += pow(1 - pow(w[i], 2), 2); 
+    }
+    return sum; 
+}
+
 // 5 dimensional Rosenbrock function 
 // Bounds: -inf < x_i < inf
 // Min parameters: (1, 1, 1, 1, 1), Min score: 0
@@ -77,4 +90,30 @@ double eggholder_function(double * w) {
     double t2 = -1 * (x) * sin(b2); 
 
     return (t1+t2); 
+}
+
+// 3 dimensional Styblinski-Tang function
+// Bounds: -5 <= x[i] <= 5
+// Min parameters (-2.903534) ** 3, Min Score: -39.166*3 = -117.498
+double styblinski_tang_function_dim3(double * w) {
+    int n = 3; 
+    double sum = 0; 
+    for (int i = 0; i < n; i++) {
+        double t2 = pow(w[i], 4) - 16 * pow(w[i], 2) + 5 * w[i];   
+        sum += t2 / 2; 
+    }
+    return sum; 
+}
+
+// 5 dimensional Styblinski-Tang function
+// Bounds: -5 <= x[i] <= 5
+// Min parameters (-2.903534) ** 5, Min Score: -39.166*5 = -195.83
+double styblinski_tang_function_dim5(double * w) {
+    int n = 5; 
+    double sum = 0; 
+    for (int i = 0; i < n; i++) {
+        double t2 = pow(w[i], 4) - 16 * pow(w[i], 2) + 5 * w[i];   
+        sum += t2 / 2; 
+    }
+    return sum; 
 }
